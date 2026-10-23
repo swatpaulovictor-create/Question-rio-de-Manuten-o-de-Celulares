@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Questionário de Manutenção de Celulares</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --card: #ffffff;
+      --text: #1d2433;
+      --muted: #626b7d;
+      --line: #e1e6ef;
+      --accent: #2457d6;
+      --accent-soft: #edf2ff;
+      --good: #167447;
+      --good-bg: #eaf8f0;
+      --bad: #b42318;
+      --bad-bg: #fff0ef;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px 14px 48px;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.55 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main { max-width: 850px; margin: 0 auto; }
+    header {
+      background: linear-gradient(135deg, #173b91, #3169ed);
+      color: white;
+      border-radius: 18px;
+      padding: 28px 24px;
+      margin-bottom: 18px;
+      box-shadow: 0 8px 22px #183b8a24;
+    }
+    header h1 { margin: 0 0 8px; font-size: clamp(1.5rem, 4vw, 2.15rem); line-height: 1.2; }
+    header p { margin: 0; color: #edf2ff; }
+    .status-card, .question, .results {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 7px #18264a08;
+    }
+    .status-row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+    .muted { color: var(--muted); font-size: .94rem; }
+    progress { width: 100%; height: 10px; accent-color: var(--accent); }
+    .question h2 { font-size: 1.06rem; margin: 0 0 12px; }
+    .option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 12px;
+      margin: 7px 0;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .option:hover { background: #f8faff; border-color: #b9c9f8; }
+    .option input { margin-top: 5px; accent-color: var(--accent); flex-shrink: 0; }
+    .option.correct { background: var(--good-bg); border-color: #8dd5ae; }
+    .option.incorrect { background: var(--bad-bg); border-color: #f0aaa5; }
+    .explanation { margin-top: 12px; padding: 11px 12px; border-radius: 9px; background: #f5f7fb; font-size: .94rem; }
+    .question-result { font-weight: 700; margin-bottom: 5px; }
+    .good-text { color: var(--good); }
+    .bad-text { color: var(--bad); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
+    button {
+      border: 0; border-radius: 10px; padding: 12px 18px;
+      font: inherit; font-weight: 700; cursor: pointer;
+    }
+    button:focus-visible, input:focus-visible + span { outline: 3px solid #92b0ff; outline-offset: 3px; }
+    .primary { background: var(--accent); color: white; flex: 1; min-width: 220px; }
+    .secondary { background: white; color: var(--text); border: 1px solid var(--line); }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+    .message { display: none; color: var(--bad); background: var(--bad-bg); padding: 12px 14px; border-radius: 10px; margin: 12px 0; }
+    .results { display: none; }
+    .score { font-size: 2rem; font-weight: 800; margin: 2px 0; }
+    footer { color: var(--muted); font-size: .85rem; text-align: center; margin-top: 28px; }
+    @media (max-width: 520px) {
+      body { padding: 12px 9px 32px; }
+      header { padding: 22px 18px; }
+      .question, .status-card, .results { padding: 14px; }
+    }
+    @media print {
+      body { background: white; }
+      header { background: white; color: black; box-shadow: none; border: 1px solid #ccc; }
+      header p { color: #333; }
+      button, .actions, .status-card { display: none !important; }
+      .question, .results { break-inside: avoid; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Questionário de Manutenção de Celulares</h1>
+    <p>Teste seus conhecimentos sobre ferramentas, diagnóstico, segurança e atendimento técnico.</p>
+  </header>
+
+  <section class="status-card" aria-label="Progresso do questionário">
+    <div class="status-row">
+      <strong>Seu progresso</strong>
+      <span id="progressText" class="muted">0 de 15 respondidas</span>
+    </div>
+    <progress id="progressBar" value="0" max="15"></progress>
+    <p class="muted">Escolha uma alternativa para cada pergunta. O gabarito só aparecerá depois de clicar em “Corrigir minhas respostas”.</p>
+  </section>
+
+  <form id="quizForm" novalidate>
+    <div id="questions"></div>
+    <div id="message" class="message" role="alert"></div>
+    <div class="actions">
+      <button type="button" class="primary" id="correctBtn">Corrigir minhas respostas</button>
+      <button type="button" class="secondary" id="resetBtn">Refazer questionário</button>
+    </div>
+  </form>
+
+  <section id="results" class="results" aria-live="polite">
+    <h2>Resultado final</h2>
+    <div class="score" id="scoreText">0 de 15</div>
+    <p id="percentText"></p>
+    <p id="feedbackText"></p>
+    <p class="muted">As respostas corretas e as explicações aparecem logo abaixo de cada pergunta.</p>
+  </section>
+  <footer>Questionário educativo baseado nos tópicos estudados na aula de manutenção de celulares.</footer>
+</main>
+
+<script>
+const questions = [
+  {
+    q: "Qual é a principal função do multímetro na manutenção de celulares?",
+    options: ["Aquecer a tela para removê-la", "Realizar medições elétricas e ajudar no diagnóstico", "Colar o vidro da tela", "Atualizar o sistema operacional"],
+    answer: 1,
+    explanation: "O multímetro permite realizar medições elétricas que ajudam a identificar possíveis falhas."
+  },
+  {
+    q: "Antes de começar a desmontar um celular, qual cuidado é importante?",
+    options: ["Forçar a tampa para ganhar tempo", "Aplicar cola na tela", "Avaliar o aparelho e trabalhar com cuidado, desconectando a bateria quando possível", "Ligar a estação de ar quente no máximo"],
+    answer: 2,
+    explanation: "A avaliação inicial e o manuseio cuidadoso ajudam a evitar danos durante o reparo."
+  },
+  {
+    q: "Para que serve a manta ou pulseira antiestática?",
+    options: ["Evitar danos causados por descargas eletrostáticas", "Aumentar a carga da bateria", "Remover a umidade da tela", "Medir a corrente elétrica"],
+    answer: 0,
+    explanation: "A proteção antiestática reduz o risco de descargas que podem danificar componentes eletrônicos."
+  },
+  {
+    q: "Qual ferramenta é indicada para ajudar a soltar componentes soldados, quando o reparo exige isso?",
+    options: ["Pincel de limpeza", "Chave Phillips comum", "Fita dupla face", "Estação de ar quente, com técnica e temperatura adequadas"],
+    answer: 3,
+    explanation: "A estação de ar quente pode ser usada em determinados reparos de componentes soldados. É necessário treinamento para não danificar a placa."
+  },
+  {
+    q: "O que você deve fazer se encontrar uma bateria estufada?",
+    options: ["Furar para liberar o gás", "Parar o procedimento e manuseá-la com segurança, sem perfurar ou pressionar", "Aquecer com ar quente", "Dar um choque para testar"],
+    answer: 1,
+    explanation: "Baterias de lítio estufadas podem ser perigosas. Não perfure, pressione nem aqueça; siga procedimentos seguros de substituição e descarte."
+  },
+  {
+    q: "Um celular não carrega. Qual é a melhor primeira atitude?",
+    options: ["Trocar imediatamente a placa-mãe", "Aplicar cola no conector", "Fazer um diagnóstico, verificando carregador, cabo, conector e bateria", "Formatar o celular sem testar nada"],
+    answer: 2,
+    explanation: "O diagnóstico deve vir antes da troca de peças. Verifique as causas mais simples e avance conforme os resultados."
+  },
+  {
+    q: "Qual é a função do fluxo de solda durante determinados reparos?",
+    options: ["Ajudar no processo de soldagem", "Medir a tensão da bateria", "Limpar a tela por dentro", "Substituir o estanho"],
+    answer: 0,
+    explanation: "O fluxo auxilia a soldagem, favorecendo o processo e ajudando a remover óxidos das superfícies."
+  },
+  {
+    q: "Por que não se deve puxar um flex ou conector com força?",
+    options: ["Porque aumenta a memória do aparelho", "Porque pode danificar o cabo, o conector ou a placa", "Porque descarrega o chip SIM", "Porque altera o IMEI automaticamente"],
+    answer: 1,
+    explanation: "Cabos flexíveis e conectores são delicados. Use a ferramenta e a técnica apropriadas."
+  },
+  {
+    q: "Para que a fonte de alimentação de bancada pode ser útil?",
+    options: ["Somente para colar telas", "Apenas para carregar qualquer bateria diretamente", "Para substituir todas as ferramentas", "Para alimentar o aparelho em testes e observar o consumo elétrico"],
+    answer: 3,
+    explanation: "A fonte pode ajudar em testes e no diagnóstico pelo comportamento do consumo, desde que sejam usados parâmetros adequados ao aparelho."
+  },
+  {
+    q: "Qual é a diferença básica entre vidro e conjunto frontal?",
+    options: ["São sempre a mesma peça", "O vidro é sempre a placa eletrônica", "O vidro é a camada externa; o conjunto frontal pode incluir touch e LCD, dependendo do modelo", "O LCD é a bateria"],
+    answer: 2,
+    explanation: "A construção varia conforme o aparelho: alguns conjuntos permitem separar camadas, enquanto outros são montados como um conjunto."
+  },
+  {
+    q: "Depois de trocar uma tela, o que é recomendável fazer antes de fechar totalmente o aparelho?",
+    options: ["Testar funções importantes, como imagem e toque", "Aplicar mais calor sem necessidade", "Apagar os dados do cliente", "Guardar o aparelho sem ligar"],
+    answer: 0,
+    explanation: "Testar antes da montagem final ajuda a detectar problemas enquanto o acesso aos componentes ainda está fácil."
+  },
+  {
+    q: "Qual produto é citado na aula para colagem de algumas telas ou frontais?",
+    options: ["Água da torneira", "B7000", "Óleo de cozinha", "Álcool comum de bebida"],
+    answer: 1,
+    explanation: "A apostila menciona a cola B7000 para determinadas aplicações. O produto e o método devem ser compatíveis com o modelo."
+  },
+  {
+    q: "Um celular caiu na água e parou de funcionar. Qual atitude é mais prudente?",
+    options: ["Continuar tentando ligá-lo repetidamente", "Colocá-lo no forno", "Conectar imediatamente ao carregador", "Evitar energizá-lo e procurar avaliação técnica para inspeção e limpeza adequadas"],
+    answer: 3,
+    explanation: "Energizar um aparelho molhado pode agravar os danos. É necessário avaliar o estado interno e proceder com segurança."
+  },
+  {
+    q: "Por que uma assistência técnica deve registrar o aparelho na ordem de serviço?",
+    options: ["Para dispensar o diagnóstico", "Para evitar conversar com o cliente", "Para registrar o estado do aparelho, o defeito relatado e o serviço combinado", "Para garantir que nunca haverá retorno"],
+    answer: 2,
+    explanation: "O registro organiza o atendimento e ajuda a documentar o que foi recebido e o que será realizado."
+  },
+  {
+    q: "Se o celular continua apresentando defeito depois de uma troca de peça, o que fazer?",
+    options: ["Reavaliar o diagnóstico e testar outras causas possíveis", "Trocar todas as peças de uma vez", "Esconder o problema do cliente", "Entregar sem informar o cliente"],
+    answer: 0,
+    explanation: "Nem todo sintoma é causado por uma única peça. Reavalie os testes e comunique o cliente com transparência."
+  }
+];
+
+const questionsEl = document.getElementById("questions");
+const progressText = document.getElementById("progressText");
+const progressBar = document.getElementById("progressBar");
+const message = document.getElementById("message");
+const results = document.getElementById("results");
+const correctBtn = document.getElementById("correctBtn");
+
+function renderQuestions() {
+  questionsEl.innerHTML = "";
+  questions.forEach((item, index) => {
+    const section = document.createElement("section");
+    section.className = "question";
+    section.id = `question-${index}`;
+    const heading = document.createElement("h2");
+    heading.textContent = `${index + 1}. ${item.q}`;
+    section.appendChild(heading);
+
+    const optionsWrap = document.createElement("div");
+    item.options.forEach((option, optionIndex) => {
+      const label = document.createElement("label");
+      label.className = "option";
+      label.dataset.option = optionIndex;
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = `question-${index}`;
+      input.value = optionIndex;
+      input.setAttribute("aria-label", `${String.fromCharCode(65 + optionIndex)}: ${option}`);
+      const text = document.createElement("span");
+      text.textContent = `${String.fromCharCode(65 + optionIndex)}) ${option}`;
+      label.append(input, text);
+      optionsWrap.appendChild(label);
+    });
+    section.appendChild(optionsWrap);
+    questionsEl.appendChild(section);
+  });
+}
+function getAnswers() {
+  return questions.map((_, index) => {
+    const selected = document.querySelector(`input[name="question-${index}"]:checked`);
+    return selected ? Number(selected.value) : null;
+  });
+}
+function updateProgress() {
+  const answers = getAnswers();
+  const count = answers.filter(answer => answer !== null).length;
+  progressText.textContent = `${count} de ${questions.length} respondidas`;
+  progressBar.value = count;
+  if (!results.classList.contains("submitted")) {
+    message.style.display = "none";
+  }
+}
+function correctQuiz() {
+  const answers = getAnswers();
+  const unanswered = answers.reduce((acc, answer, index) => answer === null ? [...acc, index] : acc, []);
+  if (unanswered.length) {
+    message.textContent = `Você ainda precisa responder ${unanswered.length} pergunta(s). Confira as questões destacadas e tente novamente.`;
+    message.style.display = "block";
+    document.getElementById(`question-${unanswered[0]}`).scrollIntoView({behavior: "smooth", block: "center"});
+    return;
+  }
+
+  let score = 0;
+  questions.forEach((item, index) => {
+    const section = document.getElementById(`question-${index}`);
+    section.querySelectorAll(".option").forEach((label, optionIndex) => {
+      label.classList.remove("correct", "incorrect");
+      if (optionIndex === item.answer) label.classList.add("correct");
+      if (optionIndex === answers[index] && answers[index] !== item.answer) label.classList.add("incorrect");
+    });
+    const previous = section.querySelector(".explanation");
+    if (previous) previous.remove();
+    const explanation = document.createElement("div");
+    explanation.className = "explanation";
+    const resultLine = document.createElement("div");
+    resultLine.className = `question-result ${answers[index] === item.answer ? "good-text" : "bad-text"}`;
+    if (answers[index] === item.answer) {
+      score++;
+      resultLine.textContent = "✓ Resposta correta!";
+    } else {
+      resultLine.textContent = `✗ Resposta incorreta. Correta: ${String.fromCharCode(65 + item.answer)}.`;
+    }
+    const detail = document.createElement("div");
+    detail.textContent = item.explanation;
+    explanation.append(resultLine, detail);
+    section.appendChild(explanation);
+  });
+
+  const percent = Math.round((score / questions.length) * 100);
+  document.getElementById("scoreText").textContent = `${score} de ${questions.length} acertos`;
+  document.getElementById("percentText").textContent = `Aproveitamento: ${percent}%`;
+  document.getElementById("feedbackText").textContent =
+    percent >= 87 ? "Excelente! Você está dominando os conceitos principais."
+    : percent >= 60 ? "Bom trabalho! Revise as explicações das questões que errou."
+    : "Continue estudando! Leia as explicações e tente novamente.";
+  results.style.display = "block";
+  results.classList.add("submitted");
+  correctBtn.disabled = true;
+  document.querySelectorAll('input[type="radio"]').forEach(input => input.disabled = true);
+  message.style.display = "none";
+  results.scrollIntoView({behavior: "smooth", block: "start"});
+}
+function resetQuiz() {
+  renderQuestions();
+  results.style.display = "none";
+  results.classList.remove("submitted");
+  message.style.display = "none";
+  correctBtn.disabled = false;
+  updateProgress();
+  window.scrollTo({top: 0, behavior: "smooth"});
+}
+renderQuestions();
+questionsEl.addEventListener("change", updateProgress);
+correctBtn.addEventListener("click", correctQuiz);
+document.getElementById("resetBtn").addEventListener("click", resetQuiz);
+updateProgress();
+</script>
+</body>
+</html>
